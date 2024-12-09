@@ -232,8 +232,8 @@ if __name__ == "__main__":
 
             # endregion
             print('\n')
-            print('-' * 50)
-            print("\nЗапросы на выборку")
+            print('-' * 80)
+            print("Запросы на выборку")
             print("Всего пользователей:", query_database(total_users_query)[0]['total_users'])
             print("Всего групп:", query_database(total_groups_query)[0]['total_groups'])
 
