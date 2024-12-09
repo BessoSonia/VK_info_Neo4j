@@ -63,19 +63,6 @@ class Neo4jHandler:
             logger.error(f"Ошибка при создании группы {group['id']}: {e}")
 
 
-    # def create_relationship(self, from_id, to_id, rel_type, from_label="User", to_label="User"):
-    #     query = f"""
-    #     MATCH (a:{from_label} {{id: $from_id}})
-    #     MATCH (b:{to_label} {{id: $to_id}})
-    #     MERGE (a)-[:{rel_type}]->(b)
-    #     """
-    #     try:
-    #         with driver.session() as session:
-    #             session.run(query, from_id=from_id, to_id=to_id)
-    #         logger.info(f"Отношение {rel_type} между {from_id} ({from_label}) и {to_id} ({to_label}) успешно создано.")
-    #     except Exception as e:
-    #         logger.error(f"Ошибка при создании отношения {rel_type} между {from_id} и {to_id}: {e}")
-
     def create_relationship(self, to_id, from_id, rel_type, from_label="User", to_label="User"):
         query = f"""
         MERGE (a:{from_label} {{id: $from_id}})
@@ -129,34 +116,6 @@ def get_user_data(user_id):
         logger.error(f"Ошибка запроса к VK API для пользователя {user_id}: {e}")
         return None
 
-
-# def get_followers(user_id, depth=0, max_depth=2):
-#     if depth > max_depth:
-#         return []
-#
-#     params = {
-#         'access_token': token,
-#         'v': version,
-#         'user_id': user_id,
-#         'count': 200
-#     }
-#     try:
-#         response = requests.get("https://api.vk.com/method/users.getFollowers", params=params)
-#         followers_data = response.json()
-#
-#         if 'response' not in followers_data:
-#             logger.warning(f"Нет данных о фолловерах для пользователя {user_id}.")
-#             return []
-#
-#         followers = followers_data['response']['items']
-#         for follower_id in followers:
-#             follower_data = get_user_data(follower_id)
-#             if follower_data:
-#                 neo4j_handler.create_user(follower_data)
-#                 neo4j_handler.create_relationship(user_id, follower_id, "FOLLOW")
-#                 get_followers(follower_id, depth=depth + 1, max_depth=max_depth)
-#     except requests.exceptions.RequestException as e:
-#         logger.error(f"Ошибка запроса к VK API для фолловеров пользователя {user_id}: {e}")
 
 def get_followers(user_id, depth=0, max_depth=2):
     if depth > max_depth:
