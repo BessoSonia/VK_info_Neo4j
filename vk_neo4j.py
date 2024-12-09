@@ -12,7 +12,7 @@ NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "neo4j")
 # Настройка доступа к VK API
 token = os.getenv("VK_ACCESS_TOKEN")
 version = 5.131
-vk_depth = 2  # Максимальная глубина рекурсии
+vk_depth = 2  # Максимальная глубина парсинга
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -28,8 +28,10 @@ class Neo4jHandler:
             logger.error(f"Ошибка подключения к Neo4j: {e}")
             raise
 
+
     def close(self):
         driver.close()
+
 
     def create_user(self, user):
         query = """
@@ -46,6 +48,7 @@ class Neo4jHandler:
         except Exception as e:
             logger.error(f"Ошибка при создании пользователя {user['id']}: {e}")
 
+
     def create_group(self, group):
         query = """
         MERGE (g:Group {id: $id})
@@ -59,16 +62,17 @@ class Neo4jHandler:
         except Exception as e:
             logger.error(f"Ошибка при создании группы {group['id']}: {e}")
 
-    def create_relationship(self, from_id, to_id, rel_type):
+
+    def create_relationship(self, from_id, to_id, rel_type, from_label="User", to_label="User"):
         query = f"""
-        MATCH (a:User {{id: $from_id}})
-        MATCH (b:User {{id: $to_id}})
+        MATCH (a:{from_label} {{id: $from_id}})
+        MATCH (b:{to_label} {{id: $to_id}})
         MERGE (a)-[:{rel_type}]->(b)
         """
         try:
             with driver.session() as session:
                 session.run(query, from_id=from_id, to_id=to_id)
-            logger.info(f"Отношение {rel_type} между {from_id} и {to_id} успешно создано.")
+            logger.info(f"Отношение {rel_type} между {from_id} ({from_label}) и {to_id} ({to_label}) успешно создано.")
         except Exception as e:
             logger.error(f"Ошибка при создании отношения {rel_type} между {from_id} и {to_id}: {e}")
 
@@ -165,7 +169,7 @@ def get_subscriptions(user_id, depth=0, max_depth=2):
             group_data = get_group_data(group_id)
             if group_data:
                 neo4j_handler.create_group(group_data)
-                neo4j_handler.create_relationship(user_id, group_id, "SUBSCRIBE")
+                neo4j_handler.create_relationship(user_id, group_id, "SUBSCRIBE", from_label="User", to_label="Group")
                 time.sleep(0.1)
     except requests.exceptions.RequestException as e:
         logger.error(f"Ошибка запроса к VK API для подписок пользователя {user_id}: {e}")
@@ -219,18 +223,18 @@ if __name__ == "__main__":
             total_groups_query = "MATCH (g:Group) RETURN count(g) AS total_groups"
 
             top_users_query = """
-                        MATCH (u:User)<-[:FOLLOW]-(f)
-                        RETURN u.id AS user_id, u.name AS name, count(f) AS follower_count
-                        ORDER BY follower_count DESC LIMIT 5
-                    """
+                                MATCH (f:User)-[:FOLLOW]->(u:User)
+                                RETURN u.id AS user_id, u.name AS name, count(f) AS follower_count
+                                ORDER BY follower_count DESC LIMIT 5
+                            """
 
             popular_groups_query = """
-                        MATCH (g:Group)<-[:SUBSCRIBE]-(u)
-                        RETURN g.id AS group_id, g.name as name, count(u) AS subscriber_count
-                        ORDER BY subscriber_count DESC LIMIT 5
-                    """
+                                MATCH (u:User)-[:SUBSCRIBE]->(g:Group)
+                                RETURN g.id AS group_id, g.name AS name, count(u) AS subscriber_count
+                                ORDER BY subscriber_count DESC LIMIT 5
 
-            # endregion
+                            """
+
             print('\n')
             print('-' * 80)
             print("Запросы на выборку")
